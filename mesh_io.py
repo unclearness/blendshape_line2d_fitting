@@ -156,13 +156,16 @@ class BlendShape(nn.Module):
     def __init__(self, base, indices, identities,
                  expressions, is_offset=False) -> None:
         super().__init__()
-        self.base = base
-        self.indices = indices
-        self.identities = identities
-        self.expressions = expressions
+        self.base = base  # (V, 3)
+        self.base_unsqueezed = self.base.unsqueeze(0)
+        self.indices = indices  # (VI, 3)
+        self.identities = identities  # (I, V, 3)
+        self.expressions = expressions  # (E, V, 3)
         if not is_offset:
-            self.identiries = identities - base
-            self.expressions = expressions - base
+            self.identities = identities - self.base_unsqueezed
+            self.expressions = expressions - self.base_unsqueezed
+            # print(self.identities[0], identities[0], self.base[0])
+            # print(self.identities.shape, identities.shape, self.base.shape)
         self.identity_coeffs = None
         self.expression_coeffs = None
         self.morphed = None
@@ -175,17 +178,19 @@ class BlendShape(nn.Module):
     '''
 
     def forward(self, identity_coeffs, expression_coeffs) -> torch.Tensor:
-        self.identity_coeffs = identity_coeffs
-        self.expression_coeffs = expression_coeffs
+        self.identity_coeffs = identity_coeffs.reshape(
+            identity_coeffs.shape[0], 1, 1)  # (I, 1, 1)
+        self.expression_coeffs = expression_coeffs.reshape(
+            expression_coeffs.shape[0], 1, 1)  # (E, 1, 1)
         self.morphed = (
             self.base
-            + self.identity_coeffs * self.identities
-            + self.expression_coeffs * self.expressions
+            + torch.sum(self.identity_coeffs * self.identities, dim=0)
+            + torch.sum(self.expression_coeffs * self.expressions, dim=0)
         )
         return self.morphed
 
 
-def parseBasies(d):
+def parseBasises(d):
     vertices = []
     names = []
     for basis in d:
@@ -200,8 +205,10 @@ def loadJsonAsBlendShape(json_path, device) -> BlendShape:
     base = torch.tensor(d['base']['vertices'], device=device)
     indices = torch.tensor(d['base']['vertex_indices'],
                            dtype=torch.int32, device=device)
-    identities = torch.tensor(parseBasies(d['identities'])[0], device=device)
-    expressions = torch.tensor(parseBasies(d['expressions'])[0], device=device)
+    identities = torch.tensor(parseBasises(d['identities'])[0], device=device)
+    expressions = torch.tensor(parseBasises(
+        d['expressions'])[0], device=device)
+    # print(base.shape, indices.shape, identities.shape, expressions.shape)
     return BlendShape(base, indices, identities, expressions)
 
 
@@ -212,4 +219,3 @@ if __name__ == "__main__":
         makeJsonFromObjs(author_eyelid_data_path, eyelid_model_path)
     device = torch.device('cuda:0')
     blend_shape = loadJsonAsBlendShape(eyelid_model_path, device)
-    
