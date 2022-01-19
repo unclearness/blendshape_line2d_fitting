@@ -16,10 +16,11 @@ if __name__ == '__main__':
     bgrUpper = np.array([0, 0, 255])    # 抽出する色の上限(bgr)
     img_mask = cv2.inRange(labels, bgrLower, bgrUpper) 
     red_points = np.where(img_mask == 255)
+    weights = torch.tensor(labels[red_points][..., 2])
     red_points = np.stack([red_points[1], red_points[0]]).T
     red_points = torch.tensor(red_points)
     print(red_points)
-    curve = line2d.getCurveFunction(red_points, device)
+    curve = line2d.getCurveFunction(red_points, device, weights)
 
     cv2.imwrite("img_mask.png", img_mask)
 

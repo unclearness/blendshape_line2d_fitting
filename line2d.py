@@ -1,12 +1,13 @@
 import torch
 
-#TODO weight
-def fitNthOrderEuqation(points, n, device):
+def fitNthOrderEuqation(points, n, device, weights=None):
     X = points[..., 0]  # (D, 1)
     Y = points[..., 1]  # (D, 1)
+    if weights is None:
+        weights = torch.ones(X.shape)
     A = torch.zeros((n+1, n+1), device=device)
     b = torch.zeros((n+1, 1), device=device)
-    X_power = [torch.tensor(1.0), X]
+    X_power = [weights, X * weights]
     for i in range(2, n * 2 + 1):
         X_power.append(X * X_power[-1])
 
@@ -23,8 +24,8 @@ def fitNthOrderEuqation(points, n, device):
     return x
 
 
-def getCurveFunction(points, device):
-    coeffs = fitNthOrderEuqation(points, 3, device)
+def getCurveFunction(points, device, weights=None):
+    coeffs = fitNthOrderEuqation(points, 3, device, weights)
 
     def polynominal3rd(coeffs, X):
         X2 = X * X
