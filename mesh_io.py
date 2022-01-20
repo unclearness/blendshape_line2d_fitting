@@ -78,8 +78,36 @@ def loadObjVerticesAndIndices(filePath):
     return vertices, faceVertIDs
 
 
-def loadObjAsDict(filePath, with_faces=True):
+def removeUnreferenced(vertices, faces):
+    referenced = [False for _ in vertices]
+    for f in faces:
+        for i in f:
+            referenced[i] = True
+    vertices_new = []
+    count = 0
+    table = [-1 for _ in vertices]
+    for i, r in enumerate(referenced):
+        if r:
+            vertices_new.append(vertices[i])
+            table[i] = count
+            count = count + 1
+    faces_new = [f for f in faces]
+    print(faces_new)
+    for i, f in enumerate(faces):
+        faces_new[i][0] = table[faces[i][0]]
+        faces_new[i][1] = table[faces[i][1]]
+        faces_new[i][2] = table[faces[i][2]]
+    return np.array(vertices_new), faces
+
+
+def loadObjAsDict(filePath, with_faces=True, remove_unreferenced=True):
     vertices, faceVertIDs = loadObjVerticesAndIndices(filePath)
+    print(filePath)
+    if remove_unreferenced:
+        # Original .obj contains unreferenced face vertices
+        # Remove them
+        vertices, faceVertIDs = removeUnreferenced(vertices, faceVertIDs)
+    print(vertices, faceVertIDs)
     name = Path(filePath).stem
     d = {"name": name, "vertices": vertices.tolist()}
     if with_faces:
@@ -181,3 +209,31 @@ if __name__ == "__main__":
         makeJsonFromObjs(author_eyelid_data_path, eyelid_model_path)
     device = torch.device('cuda:0')
     blend_shape = loadJsonAsBlendShape(eyelid_model_path, device)
+    
+    from model import OrthoCamera
+    identity_coeffs = torch.zeros(
+        (blend_shape.identities.shape[0]), device=device)
+    expressions_coeffs = torch.zeros(
+        (blend_shape.expressions.shape[0]), device=device)
+    # print(identity_coeffs, identity_coeffs.shape, bs.identities.shape)
+    morphed = blend_shape(identity_coeffs, expressions_coeffs)
+    camera = OrthoCamera(device)
+    import cv2
+    labels = cv2.imread("./data/SemanticEdge/gt_sem_rgb/id_0/result_frame0_l_rgb.png", -1)
+    v_max, max_index = torch.max(morphed, dim=0)
+    v_min, min_index = torch.min(morphed, dim=0)
+    org_diff = v_max - v_min
+    v_center = torch.sum(morphed, dim=0) / morphed.shape[0]
+    print(labels.shape, v_center)
+    h, w, c = labels.shape
+    camera.scale = w / org_diff[0]
+    # morphed = morphed - v_center
+    camera.w2c_t = -v_center * camera.scale + torch.tensor([w/2, h/2, .0], device=device)
+    projected = camera(morphed)
+    print(projected)
+    for p in projected:
+        center = (int(p[0]), int(p[1]))
+        cv2.circle(labels, center, 1, (255, 255, 255), -1)
+    cv2.imwrite("projected.png", labels)
+    saveObj("tmp.obj", projected.to('cpu').detach().numpy().copy(
+    ), [], [], blend_shape.indices.to('cpu').detach().numpy().copy(), [], [], [])

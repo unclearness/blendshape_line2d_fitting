@@ -39,3 +39,30 @@ def getCurveFunction(points, device, weights=None):
 
     return poly(coeffs)
 
+if __name__ == '__main__':
+    import cv2
+    import numpy as np
+
+    device = torch.device('cuda:0')
+
+    labels = cv2.imread("./data/SemanticEdge/gt_sem_rgb/id_0/result_frame0_l_rgb.png", -1)
+    print(np.count_nonzero(labels), np.where((labels != 0).all(axis=2)))
+
+    bgrLower = np.array([0, 0, 1])
+    bgrUpper = np.array([0, 0, 255])
+    img_mask = cv2.inRange(labels, bgrLower, bgrUpper)
+    red_points = np.where(img_mask == 255)
+    weights = torch.tensor(labels[red_points][..., 2])
+    red_points = np.stack([red_points[1], red_points[0]]).T
+    red_points = torch.tensor(red_points)
+    print(red_points)
+    curve = getCurveFunction(red_points, device, weights)
+
+    cv2.imwrite("img_mask.png", img_mask)
+
+    for x in range(labels.shape[1]):
+        y = curve(x)
+        print(x, y)
+        center = (int(x), int(y))
+        cv2.circle(labels, center, 1, (0, 255, 255), -1)
+    cv2.imwrite("curve.png", labels)

@@ -72,17 +72,19 @@ class BlendShape(nn.Module):
 
 
 class OrthoCamera(nn.Module):
-    def __init__(self) -> None:
+    def __init__(self, device) -> None:
         super().__init__()
         self.scale = 1.0
-        self.w2c_q = torch.tensor([1, 0, 0, 0])
-        self.w2c_R = quaternion_to_matrix(self.c2w_q)
-        self.w2c_t = torch.zeros((3, 1))
+        self.w2c_q = torch.tensor([1.0, .0, .0, .0], device=device)
+        self.w2c_R = quaternion_to_matrix(self.w2c_q)
+        self.w2c_t = torch.zeros((3,), device=device)
         self.points2d = None
 
-    def forward(self, points, scale) -> torch.Tensor:
+    def forward(self, points) -> torch.Tensor:
         # Ensure unit quartanion
-        self.w2c_q = self.w2c_q / torch.norm(self.w2c_q)
+        self.w2c_q = self.w2c_q / torch.linalg.norm(self.w2c_q)
         self.w2c_R = quaternion_to_matrix(self.w2c_q)
-        self.points2d = self.w2c_R @ (points * self.scale) + self.w2c_t
+        self.points2d = torch.t(self.w2c_R @
+                                torch.t(points * self.scale)) + self.w2c_t
+        self.points2d = points * self.scale + self.w2c_t
         return self.points2d
