@@ -4,7 +4,7 @@ import re
 import json
 from pathlib import Path
 import torch
-import torch.nn as nn
+from model import BlendShape
 
 
 def atoi(text):
@@ -96,8 +96,8 @@ def loadObjsAsDict(obj_dir, obj_names, with_faces):
 
 
 def saveObj(
-    filePath, vertices, uvs, normals, faceVertIDs, uvIDs, normalIDs, vertexColors
-):
+        filePath, vertices, uvs, normals,
+        faceVertIDs, uvIDs, normalIDs, vertexColors):
     f_out = open(filePath, "w")
     f_out.write("####\n")
     f_out.write("#\n")
@@ -150,44 +150,6 @@ def makeJsonFromObjs(obj_dir, json_path):
     d = {"base": base, "identities": identities, "expressions": expressions}
     with open(json_path, "w") as fp:
         json.dump(d, fp)
-
-
-class BlendShape(nn.Module):
-    def __init__(self, base, indices, identities,
-                 expressions, is_offset=False) -> None:
-        super().__init__()
-        self.base = base  # (V, 3)
-        self.base_unsqueezed = self.base.unsqueeze(0)
-        self.indices = indices  # (VI, 3)
-        self.identities = identities  # (I, V, 3)
-        self.expressions = expressions  # (E, V, 3)
-        if not is_offset:
-            self.identities = identities - self.base_unsqueezed
-            self.expressions = expressions - self.base_unsqueezed
-            # print(self.identities[0], identities[0], self.base[0])
-            # print(self.identities.shape, identities.shape, self.base.shape)
-        self.identity_coeffs = None
-        self.expression_coeffs = None
-        self.morphed = None
-
-    '''
-    def to(self, device):
-        # Manually move to members as they are not a subclass of nn.Module
-        self.cameras = self.cameras.to(device)
-        return self
-    '''
-
-    def forward(self, identity_coeffs, expression_coeffs) -> torch.Tensor:
-        self.identity_coeffs = identity_coeffs.reshape(
-            identity_coeffs.shape[0], 1, 1)  # (I, 1, 1)
-        self.expression_coeffs = expression_coeffs.reshape(
-            expression_coeffs.shape[0], 1, 1)  # (E, 1, 1)
-        self.morphed = (
-            self.base
-            + torch.sum(self.identity_coeffs * self.identities, dim=0)
-            + torch.sum(self.expression_coeffs * self.expressions, dim=0)
-        )
-        return self.morphed
 
 
 def parseBasises(d):
