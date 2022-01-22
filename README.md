@@ -4,7 +4,10 @@ In particular, this code tries to fit eye lines.
 Optimization is performed by a gradient based method with pytorch.
 This is a very partial implementation of "Real-time 3D Eyelids Tracking from Semantic Edges"
 
-![combined](https://user-images.githubusercontent.com/1129855/150648048-029a5f3f-3871-4507-b1e3-4a9ae4540f29.gif)
+<img src="https://user-images.githubusercontent.com/1129855/150648942-fe84579f-2dbc-4976-b200-69f115473751.png" width="480">
+
+<img src="https://user-images.githubusercontent.com/1129855/150648048-029a5f3f-3871-4507-b1e3-4a9ae4540f29.gif" width="480">
+
 
 
 # Run
@@ -20,6 +23,7 @@ This is a very partial implementation of "Real-time 3D Eyelids Tracking from Sem
 - Blendshape range is not limited. (typically [0-1] in practice)
 - Not very accurate because of the above reasons
   - The two lines are fitted but the algorithm does not care about the other parts.
+- More diferences...
 
 |Initial|Optimized|
 |---|---|
