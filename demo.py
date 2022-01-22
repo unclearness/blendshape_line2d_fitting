@@ -44,7 +44,6 @@ def processSingleEye(labels):
         points = torch.tensor(points)
         return points, weights
     red_points, red_weights = process(labels, 2)
-    print(red_points, red_weights)
     green_points, green_weights = process(labels, 1)
     eye_info = line2d.createEyeInfo(red_points, red_weights,
                                     green_points, green_weights, device)
@@ -72,7 +71,7 @@ def initializeCameraSingleEye(points, vertices, camera):
 def drawPoints(img, points, color):
     for i, p in enumerate(points):
         p = (int(p[0]), int(p[1]))
-        cv2.circle(img, p, 1, color, -1)
+        cv2.circle(img, p, 3, color, -1)
         #cv2.putText(img, str(i), p, cv2.FONT_HERSHEY_SIMPLEX, 0.1, color)
 
 
@@ -85,8 +84,7 @@ def drawEyeCorresp(img, src, dst):
     for s, d in zip(src, dst):
         s = (int(s[0]), int(s[1]))
         d = (int(d[0]), int(d[1]))
-        cv2.line(img, s, d, (255, 255, 255))
-
+        cv2.line(img, s, d, (255, 255, 255), 2)
 
 if __name__ == '__main__':
     loadPartsVertexIds('./data/cleaned/')
@@ -197,11 +195,14 @@ if __name__ == '__main__':
             drawEyeCorresp(tmp, parts_projected['r_lower'], corresp_pos_dict['r_lower'])
             drawEyeUpperLower(tmp, parts_projected['r_upper'], parts_projected['r_lower'])
             cv2.imwrite(out_dir + "label_" + str(i)+'.png', tmp)
-            tmp = img.copy()
-            drawEyeCorresp(tmp, parts_projected['r_upper'], corresp_pos_dict['r_upper'])
-            drawEyeCorresp(tmp, parts_projected['r_lower'], corresp_pos_dict['r_lower'])
-            drawEyeUpperLower(tmp, parts_projected['r_upper'], parts_projected['r_lower'])
-            cv2.imwrite(out_dir + "img_" + str(i) +'.png', tmp)
+            tmp2 = img.copy()
+            drawEyeCorresp(tmp2, parts_projected['r_upper'], corresp_pos_dict['r_upper'])
+            drawEyeCorresp(tmp2, parts_projected['r_lower'], corresp_pos_dict['r_lower'])
+            drawEyeUpperLower(tmp2, parts_projected['r_upper'], parts_projected['r_lower'])
+            cv2.imwrite(out_dir + "img_" + str(i) +'.png', tmp2)
+
+            combined = cv2.hconcat([tmp, tmp2])
+            cv2.imwrite(out_dir + "combined_" + str(i) +'.png', combined)
         if i % 100 == 0:
             mesh_io.saveObj(out_dir + "eye_" + str(i) + ".obj", morphed_projected.to('cpu').detach().numpy().copy(),
              [], [], bs.indices.to('cpu').detach().numpy().copy(), [], [], [])
