@@ -225,7 +225,59 @@ def loadJsonAsBlendShape(json_path, device) -> BlendShape:
     return BlendShape(base, indices, ids, exps)
 
 
+def _make_ply_txt(pc, color, normal):
+    header_lines = ["ply", "format ascii 1.0",
+                    "element vertex " + str(len(pc)),
+                    "property float x", "property float y", "property float z"]
+    has_normal = len(pc) == len(normal)
+    has_color = len(pc) == len(color)
+    if has_normal:
+        header_lines += ["property float nx",
+                         "property float ny", "property float nz"]
+    if has_color:
+        header_lines += ["property uchar red", "property uchar green",
+                         "property uchar blue", "property uchar alpha"]
+    # no face
+    header_lines += ["element face 0",
+                     "property list uchar int vertex_indices", "end_header"]
+    header = "\n".join(header_lines) + "\n"
+
+    data_lines = []
+    for i in range(len(pc)):
+        line = [pc[i][0], pc[i][1], pc[i][2]]
+        if has_normal:
+            line += [normal[i][0], normal[i][1], normal[i][2]]
+        if has_color:
+            line += [int(color[i][0]), int(color[i][1]), int(color[i][2]), 255]
+        line_txt = " ".join([str(x) for x in line])
+        data_lines.append(line_txt)
+    data_txt = "\n".join(data_lines)
+
+    # no face
+    ply_txt = header + data_txt
+
+    return ply_txt
+
+
+def write_pc_ply_txt(path, pc, color=[], normal=[]):
+    with open(path, 'w') as f:
+        txt = _make_ply_txt(pc, color, normal)
+        f.write(txt)
+
+
 if __name__ == "__main__":
+    if False:
+        vertices, _, _, faceVertIDs, _, _, _ = loadObj('./data/cleaned/base.obj')
+        with open('r_upper.txt', 'r') as f:
+            r_upper_ids = []
+            for line in f:
+                r_upper_ids.append(int(line.rstrip()))
+        r_upper = []
+        for i in r_upper_ids:
+            print(i)
+            r_upper.append(vertices[i])
+        write_pc_ply_txt('r_upper.ply', r_upper)
+
     eyelid_model_path = "./data/eyelid_model.json"
     if not os.path.exists(eyelid_model_path):
         author_eyelid_data_path = "./data/EyelidModel/"

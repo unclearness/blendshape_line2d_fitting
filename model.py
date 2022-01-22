@@ -88,3 +88,5 @@ class OrthoCamera(nn.Module):
                                 torch.t(points * self.scale)) + self.w2c_t
         self.points2d = points * self.scale + self.w2c_t
         return self.points2d
+
+
