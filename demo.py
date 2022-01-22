@@ -1,4 +1,3 @@
-from cv2 import HOGDESCRIPTOR_DEFAULT_NLEVELS
 import mesh_io
 import line2d
 import model
@@ -86,6 +85,7 @@ def drawEyeCorresp(img, src, dst):
         d = (int(d[0]), int(d[1]))
         cv2.line(img, s, d, (255, 255, 255), 2)
 
+
 if __name__ == '__main__':
     loadPartsVertexIds('./data/cleaned/')
 
@@ -140,8 +140,10 @@ if __name__ == '__main__':
 
     # Initialize RTs of the camera
     morphed, morphed_projected = update()
-    eye_points = torch.cat([eye_infos['r'].upper_points, eye_infos['r'].lower_points])
-    eye_vertices = torch.cat([parts_projected['r_upper'], parts_projected['r_lower']], dim=0)
+    eye_points = torch.cat(
+        [eye_infos['r'].upper_points, eye_infos['r'].lower_points])
+    eye_vertices = torch.cat(
+        [parts_projected['r_upper'], parts_projected['r_lower']], dim=0)
     camera = initializeCameraSingleEye(eye_points, eye_vertices, camera)
     camera.scale = camera.scale.detach()
     camera.w2c_t = camera.w2c_t.detach()
@@ -149,7 +151,8 @@ if __name__ == '__main__':
     camera.w2c_t = nn.Parameter(camera.w2c_t)
     camera.w2c_q = nn.Parameter(camera.w2c_q)
     max_iter = 1000
-    optimizer = torch.optim.Adam([identity_coeffs, expressions_coeffs, camera.scale, camera.w2c_t, camera.w2c_q], lr=0.005)
+    optimizer = torch.optim.Adam(
+        [identity_coeffs, expressions_coeffs, camera.scale, camera.w2c_t, camera.w2c_q], lr=0.005)
     for i in range(max_iter):
         optimizer.zero_grad()
 
@@ -177,13 +180,14 @@ if __name__ == '__main__':
                 loss = torch.sum(torch.abs(projected - corresp_pos))
                 # print(loss)
                 losses = losses + loss
+        # Tried to range [0, 1] but did not work well
         # w = 1000.0
         # losses += torch.sum(- expressions_coeffs[expressions_coeffs < 0]) * w
         # losses += torch.sum(- identity_coeffs[identity_coeffs < 0]) * w
         # with torch.no_grad():
         #     expressions_coeffs[:] = torch.clamp(expressions_coeffs, 0.0, 1.0)
         #     identity_coeffs[:] = torch.clamp(identity_coeffs, 0.0, 1.0)
-        losses.backward(retain_graph = True)
+        losses.backward(retain_graph=True)
         optimizer.step()
         if i % 1 == 0:
             print(i)
@@ -191,35 +195,48 @@ if __name__ == '__main__':
             print(expressions_coeffs)
             print(identity_coeffs)
             tmp = labels.copy()
-            drawEyeCorresp(tmp, parts_projected['r_upper'], corresp_pos_dict['r_upper'])
-            drawEyeCorresp(tmp, parts_projected['r_lower'], corresp_pos_dict['r_lower'])
-            drawEyeUpperLower(tmp, parts_projected['r_upper'], parts_projected['r_lower'])
+            drawEyeCorresp(tmp, parts_projected['r_upper'],
+                           corresp_pos_dict['r_upper'])
+            drawEyeCorresp(tmp, parts_projected['r_lower'],
+                           corresp_pos_dict['r_lower'])
+            drawEyeUpperLower(tmp, parts_projected['r_upper'],
+                              parts_projected['r_lower'])
             cv2.imwrite(out_dir + "label_" + str(i)+'.png', tmp)
             tmp2 = img.copy()
-            drawEyeCorresp(tmp2, parts_projected['r_upper'], corresp_pos_dict['r_upper'])
-            drawEyeCorresp(tmp2, parts_projected['r_lower'], corresp_pos_dict['r_lower'])
-            drawEyeUpperLower(tmp2, parts_projected['r_upper'], parts_projected['r_lower'])
-            cv2.imwrite(out_dir + "img_" + str(i) +'.png', tmp2)
+            drawEyeCorresp(
+                tmp2, parts_projected['r_upper'], corresp_pos_dict['r_upper'])
+            drawEyeCorresp(
+                tmp2, parts_projected['r_lower'], corresp_pos_dict['r_lower'])
+            drawEyeUpperLower(
+                tmp2, parts_projected['r_upper'], parts_projected['r_lower'])
+            cv2.imwrite(out_dir + "img_" + str(i) + '.png', tmp2)
 
             combined = cv2.hconcat([tmp, tmp2])
-            cv2.imwrite(out_dir + "combined_" + str(i) +'.png', combined)
+            cv2.imwrite(out_dir + "combined_" + str(i) + '.png', combined)
         if i % 100 == 0:
-            mesh_io.saveObj(out_dir + "eye_" + str(i) + ".obj", morphed_projected.to('cpu').detach().numpy().copy(),
-             [], [], bs.indices.to('cpu').detach().numpy().copy(), [], [], [])
-            
+            indices = bs.indices.to('cpu').detach().numpy().copy()
+            mesh_io.saveObj(out_dir + "eye_" + str(i) + ".obj",
+                            morphed_projected.to(
+                                'cpu').detach().numpy().copy(), [],
+                            [], indices,
+                            [], [], [])
+
             z = 0.0
             tmp_v = np.array([[0.0, 0.0, z], [float(labels.shape[1]), 0.0, z],
-             [0.0, float(labels.shape[0]), z], [float(labels.shape[1]), float(labels.shape[0]), z]])
+                              [0.0, float(labels.shape[0]), z],
+                              [float(labels.shape[1]),
+                               float(labels.shape[0]), z]])
             tmp_uv = [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]
             tmp_idx = [[0, 1, 2], [1, 3, 2]]
 
             mat_name = img_name[:-4]
             mesh_io.saveObj(out_dir + "input_" + str(i) + ".obj", tmp_v,
-            tmp_uv, [], tmp_idx, tmp_idx, [], [], mat_file="input.mtl", mat_name=mat_name)
+                            tmp_uv, [], tmp_idx, tmp_idx,
+                            [], [], mat_file="input.mtl", mat_name=mat_name)
 
             with open(out_dir + "input.mtl", 'w') as f:
                 f.write(
-                f"""newmtl {mat_name}
+                    f"""newmtl {mat_name}
                 Ka 0.117647 0.117647 0.117647
                 Kd 0.752941 0.752941 0.752941
                 Ks 0.752941 0.752941 0.752941
@@ -228,9 +245,3 @@ if __name__ == '__main__':
                 Ns 8
                 map_Kd """ + img_name)
             cv2.imwrite(out_dir + img_name, img)
-
-    #expressions_coeffs[0] = 1.0
-    # print(identity_coeffs, identity_coeffs.shape, bs.identities.shape)
-    #bs(identity_coeffs, expressions_coeffs)
-    # mesh_io.saveObj("tmp.obj", bs.morphed.to('cpu').detach().numpy().copy(
-    # ), [], [], bs.indices.to('cpu').detach().numpy().copy(), [], [], [])
