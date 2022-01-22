@@ -125,7 +125,7 @@ def loadObjsAsDict(obj_dir, obj_names, with_faces):
 
 def saveObj(
         filePath, vertices, uvs, normals,
-        faceVertIDs, uvIDs, normalIDs, vertexColors):
+        faceVertIDs, uvIDs, normalIDs, vertexColors, mat_file=None, mat_name=None):
     f_out = open(filePath, "w")
     f_out.write("####\n")
     f_out.write("#\n")
@@ -133,6 +133,8 @@ def saveObj(
     f_out.write("# Faces: %s\n" % (len(faceVertIDs)))
     f_out.write("#\n")
     f_out.write("####\n")
+    if mat_file is not None:
+        f_out.write("mtllib " + mat_file + "\n")
     for vi, v in enumerate(vertices):
         vStr = "v %s %s %s" % (v[0], v[1], v[2])
         if len(vertexColors) > 0:
@@ -149,6 +151,8 @@ def saveObj(
         nStr = "vn %s %s %s\n" % (n[0], n[1], n[2])
         f_out.write(nStr)
     f_out.write("# %s normals\n\n" % (len(normals)))
+    if mat_name is not None:
+        f_out.write("usemtl " + mat_name + "\n")
     for fi, fvID in enumerate(faceVertIDs):
         fStr = "f"
         for fvi, fvIDi in enumerate(fvID):

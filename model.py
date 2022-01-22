@@ -82,11 +82,11 @@ class OrthoCamera(nn.Module):
 
     def forward(self, points) -> torch.Tensor:
         # Ensure unit quartanion
-        self.w2c_q = self.w2c_q / torch.linalg.norm(self.w2c_q)
-        self.w2c_R = quaternion_to_matrix(self.w2c_q)
+        self.w2c_q_norm = self.w2c_q / torch.linalg.norm(self.w2c_q)
+        self.w2c_R = quaternion_to_matrix(self.w2c_q_norm)
         self.points2d = torch.t(self.w2c_R @
                                 torch.t(points * self.scale)) + self.w2c_t
-        self.points2d = points * self.scale + self.w2c_t
+        # self.points2d = points * self.scale + self.w2c_t
         return self.points2d
 
 

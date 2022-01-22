@@ -3,6 +3,8 @@ import numpy as np
 from typing import NamedTuple
 
 
+# TODO very unstable for larger point scale
+#  (e.g., points are larger than 100)
 def fitNthOrderEuqation(points, n, device, weights=None):
     X = points[..., 0]  # (D, 1)
     Y = points[..., 1]  # (D, 1)
@@ -22,7 +24,6 @@ def fitNthOrderEuqation(points, n, device, weights=None):
             index = i + j
             A[i][j] = torch.sum(X_power[index])
             A[j][i] = A[i][j]
-
     x = torch.linalg.solve(A, b)
     return x
 
@@ -51,6 +52,7 @@ def calcAccumlatedDists(pixel_pos_list):
             continue
         d = accum_dists[-1] + torch.linalg.norm(pixel_pos_list[i]
                                                 - pixel_pos_list[i-1])
+        d = float(d.to('cpu').detach())
         accum_dists.append(d)
     return accum_dists
 
@@ -64,14 +66,18 @@ def findCorrespondences(projected, pixel_pos_list, line_accum_dists):
     # print(proj_accum_dist)
     # print(pixel_pos_list)
     # print(pixel_pos_list[0])
+    line_accum_dists = line_accum_dists
     for i in range(projected.shape[0]):
         proj_dist = proj_accum_dist[i]
         idx = bisect_left(line_accum_dists, proj_dist)  # TODO
+        #print(idx, projected.shape, len(line_accum_dists))
+        idx = min(idx, len(line_accum_dists) - 1)
         corresp_idx.append(idx)
         corresp_pos.append(pixel_pos_list[idx])
         #print(pixel_pos_list[idx])
     # print(corresp_pos)
-    # print(corresp_idx)
+    # print(corresp_idx, len(pixel_pos_list), len(line_accum_dists))
+    #hgoe
     return corresp_idx, corresp_pos
 
 
@@ -111,6 +117,11 @@ def findEyeEndPoints(upper_eq, upper_coeffs, lower_coeffs,
     d = float(diff[0])
     x_list = cubic_equation(a, b, c, d)
     r_end, r_min, l_end, l_min = None, np.inf, None, np.inf
+
+    valid = (len(x_list) == 3)
+    if not valid:
+        return approx_r_end, approx_l_end
+
     for x in x_list:
         y = upper_eq(x)
         pos = np.array([x, y.to('cpu').detach().numpy().copy()])
@@ -147,7 +158,6 @@ def createEyeInfo(upper_points_org, upper_w,
     approx_l_end[1] = upper_curve(approx_l_end[0])
     r_end, l_end = findEyeEndPoints(upper_curve, upper_coeffs, lower_coeffs,
                                     approx_r_end, approx_l_end)
-
     upper_points, lower_points = [], []
     # print(approx_r_end, r_end, approx_l_end, l_end)
     for x in range(int(l_end[0]), int(r_end[0])+1):
