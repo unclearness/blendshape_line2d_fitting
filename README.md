@@ -23,7 +23,7 @@ This is a very partial implementation of "Real-time 3D Eyelids Tracking from Sem
 - Blendshape range is not limited. (typically [0-1] in practice)
 - Not very accurate because of the above reasons
   - The two lines are fitted but the algorithm does not care about the other parts.
-- More diferences...
+- More differences...
 
 |Initial|Optimized|
 |---|---|
