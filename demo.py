@@ -74,8 +74,8 @@ if __name__ == '__main__':
     eye_infos['r'] = processSingleEye(labels)
 
     max_iter = 1000
-    optimizer = torch.optim.Adam([identity_coeffs, expressions_coeffs], lr=0.05)
-    for i in max_iter:
+    optimizer = torch.optim.Adam([identity_coeffs, expressions_coeffs], lr=0.005)
+    for i in range(max_iter):
         optimizer.zero_grad()
         # Morph all vertices
         morphed = bs(identity_coeffs, expressions_coeffs)
@@ -92,17 +92,20 @@ if __name__ == '__main__':
                 part_name = rl + part
                 projected = parts_projected[part_name]
                 if 'upper' in part:
-                    pos_list = eye_infos[rl].upper_points
+                    points = eye_infos[rl].upper_points
                     accum_dists = eye_infos[rl].upper_accum_dists
                 else:
                     points = eye_infos[rl].lower_points
                     accum_dists = eye_infos[rl].lower_accum_dists
-                corresp_idx, corresp_pos = line2d.findCorrespondences
-                (projected,
-                 points, accum_dists)
+                # print(points)
+                corresp_idx, corresp_pos = line2d.findCorrespondences(projected,
+                                                                      points, accum_dists)
                 # Take loss
-                loss = (projected - corresp_pos) ** 2
+                corresp_pos = torch.stack(corresp_pos, dim=0)
+                # print(projected.shape, corresp_pos.shape)
+                loss = torch.sum((projected[..., :2] - corresp_pos) ** 2)
                 losses = losses + loss
+        print(losses)
         losses.backward()
         optimizer.step()
 
