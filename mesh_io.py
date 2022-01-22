@@ -164,7 +164,7 @@ def saveObj(
     f_out.close()
 
 
-def makeJsonFromObjs(obj_dir, json_path):
+def makeJsonFromObjs(obj_dir, json_path, remove_unreferenced=True):
     obj_names = [x for x in os.listdir(obj_dir) if x.lower().endswith(".obj")]
     base_name = "id_0_base.obj"
     identity_names = [x for x in obj_names if x.startswith(
@@ -172,9 +172,12 @@ def makeJsonFromObjs(obj_dir, json_path):
     identity_names = sorted(identity_names, key=natural_keys)
     expression_names = [x for x in obj_names if x.startswith("exp")]
     expression_names = sorted(expression_names, key=natural_keys)
-    base = loadObjAsDict(os.path.join(obj_dir, base_name), True)
-    identities = loadObjsAsDict(obj_dir, identity_names, False)
-    expressions = loadObjsAsDict(obj_dir, expression_names, False)
+    base = loadObjAsDict(os.path.join(obj_dir, base_name),
+                         True, remove_unreferenced)
+    identities = loadObjsAsDict(obj_dir, identity_names,
+                                False, remove_unreferenced)
+    expressions = loadObjsAsDict(obj_dir, expression_names,
+                                 False, remove_unreferenced)
     d = {"base": base, "identities": identities, "expressions": expressions}
     with open(json_path, "w") as fp:
         json.dump(d, fp)
@@ -189,17 +192,37 @@ def parseBasises(d):
     return vertices, names
 
 
-def loadJsonAsBlendShape(json_path, device) -> BlendShape:
+def loadJson(json_path, device):
     with open(json_path, 'r') as fp:
         d = json.load(fp)
     base = torch.tensor(d['base']['vertices'], device=device)
     indices = torch.tensor(d['base']['vertex_indices'],
                            dtype=torch.int32, device=device)
-    identities = torch.tensor(parseBasises(d['identities'])[0], device=device)
-    expressions = torch.tensor(parseBasises(
-        d['expressions'])[0], device=device)
+    identities, identity_names = parseBasises(d['identities'])
+    identities = torch.tensor(identities, device=device)
+    expressions, expression_names = parseBasises(d['expressions'])
+    expressions = torch.tensor(expressions, device=device)
+    return (base, indices, identities, identity_names,
+            expressions, expression_names)
+
+
+def convertJsonToObjs(json_path, obj_dir):
+    base, indices, ids, id_names, exps, exp_names = loadJson(json_path, 'cpu')
+    if not os.path.exists(obj_dir):
+        os.makedirs(obj_dir)
+    names = ['base'] + id_names + exp_names
+    vertices_list = [base.tolist()] + ids.tolist() + exps.tolist()
+    indices = indices.tolist()
+    for name, vertices, in zip(names, vertices_list):
+        saveObj(
+            os.path.join(obj_dir, name+".obj"), vertices, [], [],
+            indices, [], [], [])
+
+
+def loadJsonAsBlendShape(json_path, device) -> BlendShape:
+    base, indices, ids, id_names, exps, exp_names = loadJson(json_path, device)
     # print(base.shape, indices.shape, identities.shape, expressions.shape)
-    return BlendShape(base, indices, identities, expressions)
+    return BlendShape(base, indices, ids, exps)
 
 
 if __name__ == "__main__":
@@ -207,9 +230,10 @@ if __name__ == "__main__":
     if not os.path.exists(eyelid_model_path):
         author_eyelid_data_path = "./data/EyelidModel/"
         makeJsonFromObjs(author_eyelid_data_path, eyelid_model_path)
+    convertJsonToObjs(eyelid_model_path, './data/cleaned')
     device = torch.device('cuda:0')
     blend_shape = loadJsonAsBlendShape(eyelid_model_path, device)
-    
+
     from model import OrthoCamera
     identity_coeffs = torch.zeros(
         (blend_shape.identities.shape[0]), device=device)
@@ -219,7 +243,8 @@ if __name__ == "__main__":
     morphed = blend_shape(identity_coeffs, expressions_coeffs)
     camera = OrthoCamera(device)
     import cv2
-    labels = cv2.imread("./data/SemanticEdge/gt_sem_rgb/id_0/result_frame0_l_rgb.png", -1)
+    labels = cv2.imread(
+        "./data/SemanticEdge/gt_sem_rgb/id_0/result_frame0_l_rgb.png", -1)
     v_max, max_index = torch.max(morphed, dim=0)
     v_min, min_index = torch.min(morphed, dim=0)
     org_diff = v_max - v_min
@@ -228,7 +253,8 @@ if __name__ == "__main__":
     h, w, c = labels.shape
     camera.scale = w / org_diff[0]
     # morphed = morphed - v_center
-    camera.w2c_t = -v_center * camera.scale + torch.tensor([w/2, h/2, .0], device=device)
+    camera.w2c_t = -v_center * camera.scale + \
+        torch.tensor([w/2, h/2, .0], device=device)
     projected = camera(morphed)
     print(projected)
     for p in projected:
