@@ -20,7 +20,7 @@ This is a very partial implementation of "Real-time 3D Eyelids Tracking from Sem
 - Pytorch based optimization.
 - Only two eye lines are fitted.
   - The paper fits four lines.
-- Blendshape range is not limited. (typically [0-1] in practice)
+- Blendshape range is not limited. (typically [0, 1] in practice)
 - Not very accurate because of the above reasons
   - The two lines are fitted but the algorithm does not care about the other parts.
 - More differences...
@@ -36,7 +36,7 @@ This is a very partial implementation of "Real-time 3D Eyelids Tracking from Sem
 - cv2
 
 # Misc
-The original model includes unreferenced vertices (non eye parts, such as head). The code remove them first. Then, cleaned models will be generated in `./data/cleaned/`. Attached files (e.g., `r_lower.txt`) describe vertex ids of the corresponding eye parts for the cleanded models.
+The original model includes unreferenced vertices (non eye parts, such as head). The code remove them first. Then, cleaned models will be generated in `./data/cleaned/`. Attached files (e.g., `r_lower.txt`) describe vertex ids of the corresponding eye parts for the cleanded models. I made the files by `./misc/blender_vertex_id_extraction.py` with Blender 2.92. I manually selected vertex groups on the cleaned models and run the script.
 
 # Reference
 - Quan Wen, Feng Xu, Ming Lu and Jun-Hai Yong. 2017. "Real-time 3D Eyelids Tracking from Semantic Edges". ACM Transaction on Graphics (TOG).
