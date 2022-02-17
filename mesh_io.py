@@ -115,10 +115,11 @@ def loadObjAsDict(filePath, with_faces=True, remove_unreferenced=True):
     return d
 
 
-def loadObjsAsDict(obj_dir, obj_names, with_faces):
+def loadObjsAsDict(obj_dir, obj_names, with_faces, remove_unreferenced=True):
     objs = []
     for obj_name in obj_names:
-        obj = loadObjAsDict(os.path.join(obj_dir, obj_name), with_faces)
+        obj = loadObjAsDict(os.path.join(obj_dir, obj_name),
+                            with_faces, remove_unreferenced)
         objs.append(obj)
     return objs
 
@@ -178,10 +179,10 @@ def makeJsonFromObjs(obj_dir, json_path, remove_unreferenced=True):
     expression_names = sorted(expression_names, key=natural_keys)
     base = loadObjAsDict(os.path.join(obj_dir, base_name),
                          True, remove_unreferenced)
-    identities = loadObjsAsDict(obj_dir, identity_names,
-                                False, remove_unreferenced)
-    expressions = loadObjsAsDict(obj_dir, expression_names,
-                                 False, remove_unreferenced)
+    identities = loadObjsAsDict(
+        obj_dir, identity_names, False, remove_unreferenced)
+    expressions = loadObjsAsDict(
+        obj_dir, expression_names, False, remove_unreferenced)
     d = {"base": base, "identities": identities, "expressions": expressions}
     with open(json_path, "w") as fp:
         json.dump(d, fp)
@@ -271,7 +272,8 @@ def write_pc_ply_txt(path, pc, color=[], normal=[]):
 
 if __name__ == "__main__":
     if False:
-        vertices, _, _, faceVertIDs, _, _, _ = loadObj('./data/cleaned/base.obj')
+        vertices, _, _, faceVertIDs, _, _, _ = loadObj(
+            './data/cleaned/base.obj')
         with open('r_upper.txt', 'r') as f:
             r_upper_ids = []
             for line in f:
