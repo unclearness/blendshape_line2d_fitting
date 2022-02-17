@@ -90,6 +90,10 @@ if __name__ == '__main__':
     loadPartsVertexIds('./data/cleaned/')
 
     eyelid_model_path = './data/eyelid_model.json'
+    if not os.path.exists(eyelid_model_path):
+        author_eyelid_data_path = "./data/EyelidModel/"
+        mesh_io.makeJsonFromObjs(author_eyelid_data_path, eyelid_model_path)
+        mesh_io.convertJsonToObjs(eyelid_model_path, './data/cleaned')
     bs = mesh_io.loadJsonAsBlendShape(eyelid_model_path, device)
     identity_coeffs = torch.zeros(
         (bs.identities.shape[0]), device=device)
